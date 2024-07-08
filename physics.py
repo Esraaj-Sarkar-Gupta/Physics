@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.colors import Normalize
 import time as tm
+import os as os # I like adding bullshit like this to my code sometimes
 
 T = tm.localtime() # Pull time at which program is run
 filename = f"Logs/Logs_{T[7]}_{T[3]}-{T[4]}-{T[5]}.txt" # Set log file name
@@ -79,7 +80,7 @@ def Electro(k , q1 , q2 , r1, r2): # Coloumb's Law of Electrostatics
 
 # skip nuclear forces
 
-# Define force interactions
+# Define force interactions and gallilean transforms
 def delta_v(a , u , t):
     v = u + a*t
     return v
@@ -127,7 +128,7 @@ log("Functions defined")
 
 # Define elements in system:
     
-System_Archive = [
+System_Archive = [ # Holds all the obkects
    { 
     "mass" : 1, 
     "charge" : 50000,
@@ -137,7 +138,7 @@ System_Archive = [
     },
    {
     "mass" : 1,
-    "charge" : -yea50000,
+    "charge" : -50000,
     "velocity" : np.array([0.0 , 0.0]),
     "position" : np.array([1.0,0.0]),
     "color" : 'aqua'    
@@ -151,55 +152,51 @@ System_Archive = [
     },
 ]
 
-System = []
+System = [] # System list pulls seleted objects from System_Archive using loops defined below
 
 s = 1 # Select trunkator
 
-for i in range(len(System_Archive) - s):
+for i in range(len(System_Archive) - s): # Pull data from System_Archive and generate a list System 
     System.append(System_Archive[i])
 t = np.linspace(0 , 5 , 5 * 100)
 
 log("System defined")
 
-System_data = []
-System_data_helper = []
+System_data = [] # Holds positions for each object in the system for each instance of time 
+System_data_helper = [] # Holds accelerations of each object in the system for each instance of time
 
-for _ in t: # Add rows required for each time instance
+for _ in t: # Add rows ro System_data and System_data_helper required for each time instance
     System_data.append([])
     System_data_helper.append([])
+    
 for i in range(len(System) - s):
-    System_data[0].append(System[i]['position']) # Append initial positions
-    System_data_helper[0].append(np.array([0.0 , 0.0]))
+    System_data[0].append(System[i]['position']) # Append initial positions into System_data
+    System_data_helper[0].append(np.array([0.0 , 0.0])) # Append initial zeros into System_data_helper
 log("System data list defined")
 
-for j in range(len(t)):
+for j in range(len(t)): # Computes System for each instance of time
     backend_log(f"[Time_Debug]: Running on time instance {t[j]} with delta_t = {t[j] - t[j-1]}")
     delta_t = t[j] - t[j - 1]
-    for n in range(len(System)):
+    for n in range(len(System)): # Computes interactions on each object by the rest of the objects in the system
         debug(f"At time instance {t[j]}:")
-        X , V , a = Update(n , delta_t )
-        System_data[j].append(X)
-        System_data_helper[j].append(a)
+        X , V , a = Update(n , delta_t ) # Pull updated values of position X and velocity V and acceleration a from Update() function
+        System_data[j].append(X) # Append the updated position to the System_data for current time instance
+        System_data_helper[j].append(a) # Append the updated acceleration to the System_data_helper for current time instance
     backend_log(f"[Time_Debug]: End time instance {t[j]}")
-
-cmap = plt.cm.get_cmap("viridis")
-colors = cmap(np.linspace(0, 1, len(System_data))) # Color map
-
+    
 d = 3 # Dimensions of plot
 
-#print(System)
-#print(System_data[0])
 log("Plotting diagrams...")
 
-alpha = 2
+alpha = 2 # Scaling factor for plots should it be useful
 
 for i in range(len(t)):
-    plt.figure()
+    plt.figure() # Set up plot
     plt.xlim(-d , d)
     plt.ylim(-d , d)
     plt.grid(True)
     plt.title(f"Time instance {t[i]}")
-    for j in range(len(System_data[i])):
+    for j in range(len(System_data[i])): # Pull data from System_data and System_data_helper to plot
         #print(j)
         x = System_data[i][j][0]
         y = System_data[i][j][1]
@@ -224,19 +221,25 @@ for i in range(len(t)):
                         #print(cl)
                 except IndexError as e:
                     log(f"[Error]: {e}, ignored and proceed with special cases") # To handle errors that happen here for some reason
-                    cl = 'red'
+                    cl = 'red' # colour code erronious points
             else:
                 cl = System[j]['color'] # Pull colour setting from system object properties
         except:
-            log(f"[Error]: Unknown indexing error (?)")
-            cl = 'red'
+            log(f"[Error]: Unknown indexing error (?)") # Handle an indexing error that happens for some god forsaken reason
+            cl = 'red' # colour code erronious points
         try:
-            plt.scatter(x, y, color = cl)
+            plt.scatter(x, y, color = cl) # Plot the position
         except:
             log(f"[Error]: The color {cl} defined for object {System[j]} is not recognised")
-        plt.plot(Ex, Why , color = 'red')
-    plt.savefig(f"Results/Frame_{i}.png")
-    plt.show()
+        plt.plot(Ex, Why , color = 'red') # Plot the scaled acceleration vector
+    try:
+        plt.savefig(f"Results/Frame_{i}.png") # Save plots into a folder Results
+    except:
+        log("[Error]: Results folder doesn't exist")
+        os.makedirs('Results') # Make folder if it doesn't exist
+        log("Results folder made using os.makedirs")
+        plt.savefig(f"Results/Frame_{i}.png") # Save plots into a folder Results
+    plt.show() # Make plot visible
 log("Finishing plotting figures. Figures saved to file Results")
      
     
